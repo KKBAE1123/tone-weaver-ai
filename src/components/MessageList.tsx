@@ -9,6 +9,10 @@ export interface Message {
   content: string;
   sender: 'user' | 'ai';
   timestamp: Date;
+  tone?: string;
+  relationship?: string;
+  scenario?: string;
+  userId?: string;
 }
 
 interface MessageListProps {
@@ -34,7 +38,11 @@ const MessageList = ({ messages, onCopyMessage, onFeedback }: MessageListProps) 
     <div className="space-y-4">
       {messages.map((message) => (
         <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-          <div className={message.sender === 'user' ? 'user-message' : 'ai-message'}>
+          <div 
+            className={`${message.sender === 'user' 
+              ? 'bg-glycos-600 text-white rounded-2xl rounded-tr-none max-w-[85%] p-4' 
+              : 'bg-white border border-glycos-200 rounded-2xl rounded-tl-none max-w-[85%] p-4'}`}
+          >
             <p className="whitespace-pre-wrap">{message.content}</p>
             
             {message.sender === 'ai' && (

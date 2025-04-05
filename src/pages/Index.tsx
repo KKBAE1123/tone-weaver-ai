@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import Header from '@/components/Header';
 import ToneSelector from '@/components/ToneSelector';
@@ -8,57 +8,90 @@ import ScenarioSelector from '@/components/ScenarioSelector';
 import MessageList, { Message } from '@/components/MessageList';
 import MessageInput from '@/components/MessageInput';
 import Sidebar from '@/components/Sidebar';
+import { useAuth } from '@/contexts/AuthContext';
+import { saveMessage, fetchMessages, generateAIResponse } from '@/services/messageService';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
 
 const Index = () => {
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
   const [selectedTone, setSelectedTone] = useState('Smooth Like Honey');
   const [selectedRelationship, setSelectedRelationship] = useState('');
   const [selectedScenario, setSelectedScenario] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendMessage = (message: string) => {
+  // Fetch messages on component mount
+  useEffect(() => {
+    if (user) {
+      const loadMessages = async () => {
+        try {
+          const userMessages = await fetchMessages(user.id);
+          setMessages(userMessages);
+        } catch (error) {
+          console.error('Error loading messages:', error);
+          toast({
+            title: "Failed to load messages",
+            description: "Could not retrieve your message history.",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      loadMessages();
+    }
+  }, [user, toast]);
+
+  const handleSendMessage = async (content: string) => {
+    if (!user) return;
+    
     // Add user message
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      content: message,
+    const userMessage: Omit<Message, 'id'> = {
+      content,
       sender: 'user',
       timestamp: new Date(),
+      userId: user.id,
     };
     
-    setMessages(prev => [...prev, userMessage]);
-    
-    // Generate AI response based on selected parameters
-    setTimeout(() => {
-      generateResponse(message, selectedTone, selectedRelationship, selectedScenario);
-    }, 1000);
-  };
-
-  const generateResponse = (
-    message: string,
-    tone: string,
-    relationship: string,
-    scenario: string
-  ) => {
-    // Mock response generation - in a real app, this would call an API
-    const responses = {
-      'Smooth Like Honey': "I understand how challenging this situation must be for you. Perhaps we could discuss this further when we're both feeling more centered? I value our relationship and want to find a solution that works for both of us.",
-      'Sweet & Subtle': "I see where you're coming from, though I might have a slightly different perspective on this. Maybe we could find some middle ground that addresses both our concerns?",
-      'Soft-Serve': "Thank you for sharing this with me! I really appreciate your honesty. If it's okay with you, I'd love to suggest a small adjustment that might help us both feel more comfortable.",
-      'Berry Nice': "Hey there! 😊 I totally get what you're saying and I'm so grateful you brought this up! Let's figure this out together - I'm sure we can find an awesome solution! 💕",
-      'Spicy Sugar': "Well, that's certainly an... interesting approach. Perhaps we could try something that actually works for everyone involved? Just a thought.",
-      'Sugarcoat It': "I really value what you bring to the table, and I think with a few small tweaks, this could be even better. Would you be open to exploring some alternatives?",
-      'Bittersweet Truth': "I need to be direct - this isn't working for me. I respect you too much to not be honest, but I'm committed to finding a solution that respects both our needs."
-    };
-    
-    const aiMessage: Message = {
-      id: `ai-${Date.now()}`,
-      content: responses[tone as keyof typeof responses] || 
-        "I've considered your situation carefully. Based on what you've shared, I suggest communicating your feelings clearly while remaining respectful of their perspective. Would you like me to help you draft a specific response?",
-      sender: 'ai',
-      timestamp: new Date(),
-    };
-    
-    setMessages(prev => [...prev, aiMessage]);
+    try {
+      const savedUserMessage = await saveMessage(userMessage);
+      setMessages(prev => [...prev, savedUserMessage as Message]);
+      
+      // Start generating AI response
+      setIsLoading(true);
+      
+      // Generate AI response
+      const aiResponseContent = await generateAIResponse(
+        content,
+        selectedTone,
+        selectedRelationship,
+        selectedScenario
+      );
+      
+      // Save AI response to database
+      const aiMessage: Omit<Message, 'id'> = {
+        content: aiResponseContent,
+        sender: 'ai',
+        timestamp: new Date(),
+        tone: selectedTone,
+        relationship: selectedRelationship,
+        scenario: selectedScenario,
+        userId: user.id,
+      };
+      
+      const savedAiMessage = await saveMessage(aiMessage);
+      setMessages(prev => [...prev, savedAiMessage as Message]);
+    } catch (error) {
+      console.error('Error processing message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process your message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCopyMessage = (message: string) => {
@@ -80,6 +113,19 @@ const Index = () => {
     });
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Sign out failed",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
       <Header />
@@ -88,9 +134,19 @@ const Index = () => {
         
         <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-gradient-to-b from-glycos-50/50 to-white">
           <div className="container max-w-4xl mx-auto space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold gradient-text">Communication Assistant</h1>
-              <p className="text-gray-600 mt-1">Let Glycos help you craft the perfect message for any situation</p>
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold gradient-text">Communication Assistant</h1>
+                <p className="text-gray-600 mt-1">Let Glycos help you craft the perfect message for any situation</p>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleSignOut}
+                className="flex items-center gap-1"
+              >
+                <LogOut className="h-4 w-4" /> Sign Out
+              </Button>
             </div>
             
             <ToneSelector selectedTone={selectedTone} onSelectTone={setSelectedTone} />
@@ -112,7 +168,7 @@ const Index = () => {
               onFeedback={handleFeedback}
             />
             
-            <MessageInput onSendMessage={handleSendMessage} />
+            <MessageInput onSendMessage={handleSendMessage} isLoading={isLoading} />
           </div>
         </main>
       </div>
