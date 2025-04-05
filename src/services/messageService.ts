@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/components/MessageList';
+import type { Database } from '@/integrations/supabase/types';
 
 // Function to save a message to Supabase
 export async function saveMessage(message: Omit<Message, 'id'>) {
@@ -23,6 +24,10 @@ export async function saveMessage(message: Omit<Message, 'id'>) {
       throw error;
     }
 
+    if (!data) {
+      throw new Error('No data returned from insert');
+    }
+
     return { id: data.id, ...message };
   } catch (error) {
     console.error('Failed to save message:', error);
@@ -31,7 +36,7 @@ export async function saveMessage(message: Omit<Message, 'id'>) {
 }
 
 // Function to fetch messages for the current user
-export async function fetchMessages(userId: string) {
+export async function fetchMessages(userId: string): Promise<Message[]> {
   try {
     const { data, error } = await supabase
       .from('messages')
@@ -42,6 +47,10 @@ export async function fetchMessages(userId: string) {
     if (error) {
       console.error('Error fetching messages:', error);
       throw error;
+    }
+
+    if (!data) {
+      return [];
     }
 
     // Transform database records to Message objects
