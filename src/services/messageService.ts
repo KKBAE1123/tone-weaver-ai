@@ -4,7 +4,7 @@ import type { Message } from '@/components/MessageList';
 import type { Database } from '@/integrations/supabase/types';
 
 // Function to save a message to Supabase
-export async function saveMessage(message: Omit<Message, 'id'>) {
+export async function saveMessage(message: Omit<Message, 'id'>): Promise<Message> {
   try {
     const { data, error } = await supabase
       .from('messages')
@@ -76,7 +76,7 @@ export async function generateAIResponse(
   tone: string,
   relationship?: string,
   scenario?: string
-) {
+): Promise<string> {
   try {
     const { data, error } = await supabase.functions.invoke('generate-response', {
       body: { message, tone, relationship, scenario },

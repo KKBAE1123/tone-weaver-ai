@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/Auth";
+import VoiceAgent from "./pages/VoiceAgent";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,11 @@ const App = () => (
             <Route path="/" element={
               <ProtectedRoute>
                 <Index />
+              </ProtectedRoute>
+            } />
+            <Route path="/voice" element={
+              <ProtectedRoute>
+                <VoiceAgent />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

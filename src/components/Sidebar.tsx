@@ -3,8 +3,13 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, Mic, Clock, Users, Settings, LogOut, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Sidebar = () => {
+  const location = useLocation();
+  const { signOut } = useAuth();
+  
   return (
     <div className="w-64 border-r border-gray-200 bg-white h-full hidden lg:flex flex-col">
       <div className="p-4">
@@ -31,14 +36,24 @@ const Sidebar = () => {
       </ScrollArea>
       
       <div className="border-t border-gray-200 p-3 space-y-1">
-        <Button variant="ghost" className="w-full justify-start gap-2">
-          <MessageCircle className="h-4 w-4" />
-          Text Mode
-        </Button>
-        <Button variant="ghost" className="w-full justify-start gap-2">
-          <Mic className="h-4 w-4" />
-          Voice Mode
-        </Button>
+        <Link to="/">
+          <Button 
+            variant="ghost" 
+            className={`w-full justify-start gap-2 ${location.pathname === '/' ? 'bg-slate-100' : ''}`}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Text Mode
+          </Button>
+        </Link>
+        <Link to="/voice">
+          <Button 
+            variant="ghost" 
+            className={`w-full justify-start gap-2 ${location.pathname === '/voice' ? 'bg-slate-100' : ''}`}
+          >
+            <Mic className="h-4 w-4" />
+            Voice Mode
+          </Button>
+        </Link>
         <Button variant="ghost" className="w-full justify-start gap-2">
           <Clock className="h-4 w-4" />
           History
@@ -51,7 +66,11 @@ const Sidebar = () => {
           <Settings className="h-4 w-4" />
           Settings
         </Button>
-        <Button variant="ghost" className="w-full justify-start text-red-500 gap-2">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-red-500 gap-2"
+          onClick={signOut}
+        >
           <LogOut className="h-4 w-4" />
           Sign Out
         </Button>
